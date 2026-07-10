@@ -1,12 +1,10 @@
 from datetime import datetime, timezone
-from typing import cast
 
 from fastapi import APIRouter, Depends, status, HTTPException
-from jose import jwt
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, cast
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import joinedload
 
 from config import get_jwt_auth_manager, get_settings, BaseAppSettings
 from database import (
@@ -58,6 +56,12 @@ async def register_user(
         group_result = await db.execute(group_stmt)
         user_group = group_result.scalars().first()
 
+        if not user_group:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Default user group not found."
+            )
+
         new_user = UserModel.create(
             email=user_data.email,
             raw_password=user_data.password,
@@ -67,7 +71,7 @@ async def register_user(
         db.add(new_user)
         await db.flush()
 
-        activation_token = ActivationTokenModel(user_id=new_user.id)
+        activation_token = ActivationTokenModel(user_id=cast(int, new_user.id))
         db.add(activation_token)
 
         await db.commit()
@@ -116,7 +120,7 @@ async def activate_user(
         )
 
     activation_token = user.activation_token
-    expires_at = activation_token.expires_at
+    expires_at = cast(datetime, activation_token.expires_at)
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
 
@@ -141,8 +145,8 @@ async def activate_user(
     response_model=MessageResponseSchema,
     status_code=status.HTTP_200_OK,
 )
-async def reset_password(
-    reset_data: PasswordResetCompleteRequestSchema,
+async def request_password_reset(
+    reset_data: PasswordResetRequestSchema,
     db: AsyncSession = Depends(get_db),
 ) -> MessageResponseSchema:
     response_schema = "If you are registered, you will receive an email with instructions."
@@ -160,7 +164,7 @@ async def reset_password(
         )
     )
 
-    reset_token = PasswordResetTokenModel(user_id=user.id)
+    reset_token = PasswordResetTokenModel(user_id=cast(int, user.id))
     db.add(reset_token)
 
     await db.commit()
@@ -173,8 +177,8 @@ async def reset_password(
     response_model=MessageResponseSchema,
     status_code=status.HTTP_200_OK,
 )
-async def reset_password(
-    reset_data: PasswordResetRequestSchema,
+async def complete_password_reset(
+    reset_data: PasswordResetCompleteRequestSchema,
     db: AsyncSession = Depends(get_db),
 ) -> MessageResponseSchema:
     stmt = (select(UserModel)
@@ -190,7 +194,7 @@ async def reset_password(
         )
 
     reset_token = user.password_reset_token
-    expires_at = reset_token.expires_at
+    expires_at = cast(datetime, reset_token.expires_at)
 
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
@@ -255,7 +259,7 @@ async def login_user(
 
     try:
         refresh_token_record = RefreshTokenModel.create(
-            user_id=user.id,
+            user_id=cast(int, user.id),
             days_valid=settings.LOGIN_TIME_DAYS,
             token=refresh_token
         )
@@ -310,7 +314,7 @@ async def refresh_user_token(
 
     if refresh_token_record.user_id != user_id:
         raise HTTPException(
-            status_code=status.HTTP_400,
+            status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid token."
         )
 

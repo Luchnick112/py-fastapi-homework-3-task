@@ -31,11 +31,11 @@ class MessageResponseSchema(BaseModel):
     message: str
 
 
-class PasswordResetCompleteRequestSchema(BaseModel):
+class PasswordResetRequestSchema(BaseModel):
     email: EmailStr
 
 
-class PasswordResetRequestSchema(BaseModel):
+class PasswordResetCompleteRequestSchema(BaseModel):
     email: EmailStr
     token: str
     password: str
