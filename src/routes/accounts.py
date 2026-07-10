@@ -281,7 +281,7 @@ async def login_user(
         )
 
 @router.post(
-    "/refresh/",
+    "/api/v1/accounts/refresh/",
     response_model=TokenRefreshResponseSchema,
     status_code=status.HTTP_200_OK,
 )
