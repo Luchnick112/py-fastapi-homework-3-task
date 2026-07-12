@@ -32,6 +32,7 @@ from security.interfaces import JWTAuthManagerInterface
 
 router = APIRouter()
 
+
 @router.post(
     "/register/",
     response_model=UserRegistrationResponseSchema,
@@ -79,7 +80,7 @@ async def register_user(
         await db.refresh(new_user)
         return new_user
 
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -140,6 +141,7 @@ async def activate_user(
     return MessageResponseSchema(
         message="User account activated successfully."
     )
+
 
 @router.post(
     "/password-reset/request/",
@@ -212,7 +214,6 @@ async def complete_password_reset(
             detail="Invalid email or token."
         )
 
-
     try:
         user.set_password(reset_data.password)
         await db.delete(reset_token)
@@ -280,6 +281,7 @@ async def login_user(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while processing the request."
         )
+
 
 @router.post(
     "/api/v1/accounts/refresh/",

@@ -39,6 +39,7 @@ class PasswordResetCompleteRequestSchema(BaseModel):
     email: EmailStr
     token: str
     password: str
+
     @field_validator("password")
     @classmethod
     def validate_password(cls, value: str) -> str:
